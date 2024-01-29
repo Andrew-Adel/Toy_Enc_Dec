@@ -39,13 +39,15 @@ static void toy_mulmv(short *dst, const short *mat, const short *vec)
 	}
 }
 
-static void toy_mulmTv(short *dst, const short *mat, const short *vec){
-	memset(dst, 0, TK_K*TK_N*sizeof(short));
-	for (int kv = 0;  kv < TK_K*TK_N; kv+=TK_N) {
-		for (int k = 0; k < TK_K*TK_N; k+=TK_N) {
-			toy_polmul_naive(dst+kv, mat+TK_K*k + kv, vec+k, 1);
-		}
-	}
+static void toy_mulmTv(short* dst, const short* mat, const short* vec)
+{
+    memset(dst, 0, TK_K * TK_N * sizeof(short));
+    for (int kv = 0; kv < TK_K * TK_N; kv += TK_N)
+    {
+        for (int k = 0; k < TK_K * TK_N; k += TK_N)
+            toy_polmul_naive(dst + kv, mat + TK_K * k + kv, vec + k, 1);
+    }
+
 }
 
 static void toy_dot(short *dst, const short *v1, const short *v2)
@@ -79,46 +81,37 @@ void toy_gen(short *A, short *t, short *s)
 	toy_add(t,t,e,TK_K*TK_N,0);
 }
 
-void toy_enc(const short *A, const short *t, int plain, short *u, short *v)
+void toy_enc(const short* A, const short* t, int plain, short* u, short* v)
 {
-	short r[TK_K*TK_N], e1[TK_K*TK_N], e2[TK_N];
-	toy_fill_small(r, TK_K*TK_N);
-	toy_fill_small(e1, TK_K*TK_N);
-	toy_fill_small(e2, TK_N);
+    short r[TK_K * TK_N], e1[TK_K * TK_N], e2[TK_N];
+    toy_fill_small(r, TK_K * TK_N);
+    toy_fill_small(e1, TK_K * TK_N);
+    toy_fill_small(e2, TK_N);
 
-	toy_mulmTv(u, A, r);
-	toy_add(u,u,e1, TK_K*TK_N,0);
+    toy_mulmTv(u, A, r); //u = AT.r + e1
+    toy_add(u, u, e1, TK_K * TK_N, 0);
 
-	toy_dot(v, t, r);
-	toy_add(v,v,e2, TK_N,0);
-
-	for (int k = 0; k < TK_N; ++k) {
-		v[k] = (v[k]+((TK_Q>>1)& -(plain>>k&1)))%TK_Q;
-	}
+    toy_dot(v, t, r);   //v = tT.r + e2 + plain * q/2
+    toy_add(v, v, e2, TK_N, 0);
+    for (int k = 0; k < TK_N; ++k)
+        v[k] = (v[k] + ((TK_Q >> 1) & -(plain >> (TK_N - 1 - k) & 1))) % TK_Q;
 }
 
-int toy_dec(const short *s, const short *u, const short *v)
+int toy_dec(const short* s, const short* u, const short* v)
 {
-	short p[TK_N], plain;
-	toy_dot(p, s, u);
-	toy_add(p, v, p, TK_N, 1);
+    short p[TK_N], plain;
+    toy_dot(p, s, u);
+    toy_add(p, v, p, TK_N, 1);
 
-	plain = 0;
-	for (int k = 0; k < TK_N; ++k) {
-		int val = p[k];
-		if(val>TK_Q/2)
-			val -= TK_Q;
-		printf("%5d ", val);
-		int bit = abs(val) > TK_Q/4;
-
-		plain |= bit<<k;
-	}
-	return plain;
+    plain = 0;
+    for (int k = 0; k < TK_N; ++k)
+    {
+        int val = p[k];
+        if (val > TK_Q / 2)
+            val -= TK_Q;
+        printf("%5d ", val);
+        int bit = abs(val) > TK_Q / 4;
+        plain |= bit << (TK_N - 1 - k);
+    }
+    return plain;
 }
-
-
-
-
-
-
-
